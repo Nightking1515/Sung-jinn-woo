@@ -27,7 +27,7 @@ ADMIN_TG_ID = None  # set to your telegram id if you want admin-only commands ac
 INTEREST_RATE_DAILY = 0.02  # 2% daily interest (interest goes to HAND)
 DAILY_TASK_COUNT = 3
 import os
-BOT_TOKEN = ["8050711631:AAEOmQtI1LDg8F5zBST1tIPh0mDtHbIISEs"]
+BOT_TOKEN = "8050711631:AAEOmQtI1LDg8F5zBST1tIPh0mDtHbIISEs"
 
 if not BOT_TOKEN:
     print("ERROR: Set BOT_TOKEN environment variable before running.")
