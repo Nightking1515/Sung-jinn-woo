@@ -1,1 +1,9 @@
+services:
+  - type: web
+    name: solo-leveling-bot
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python solo_bot.py
+    # set env var BOT_TOKEN in Render dashboard, do NOT put token here
 
