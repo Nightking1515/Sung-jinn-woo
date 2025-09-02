@@ -168,12 +168,68 @@ def get_daily_tasks_for_user_id(user_id):
     return rows
 
 # ------------ Shop items (simple) ------------
-SHOP_ITEMS = [
-    {"id":1, "name":"Health Potion", "type":"consumable", "price":50},
-    {"id":2, "name":"Stamina Potion", "type":"consumable", "price":50},
-    {"id":3, "name":"Basic Sword", "type":"sword", "price":200},
-    {"id":4, "name":"Revival Shard", "type":"revival", "price":500},
-]
+# Shop items data
+SHOP_ITEMS = {
+    "swords": [
+        {"id": 1, "name": "Iron Sword", "price": 200, "damage": 10},
+        {"id": 2, "name": "Steel Sword", "price": 500, "damage": 20},
+        {"id": 3, "name": "Silver Sword", "price": 800, "damage": 30},
+        {"id": 4, "name": "Magic Sword", "price": 1500, "damage": 50},
+        {"id": 5, "name": "Flame Sword", "price": 2200, "damage": 70},
+        {"id": 6, "name": "Ice Sword", "price": 2500, "damage": 80},
+        {"id": 7, "name": "Thunder Sword", "price": 3000, "damage": 100},
+        {"id": 8, "name": "Dark Sword", "price": 4000, "damage": 120},
+        {"id": 9, "name": "Light Sword", "price": 4200, "damage": 125},
+        {"id": 10, "name": "Dragon Slayer", "price": 5000, "damage": 150},
+        {"id": 11, "name": "Shadow Blade", "price": 6000, "damage": 180},
+        {"id": 12, "name": "Heavenly Sword", "price": 7500, "damage": 200},
+        {"id": 13, "name": "Chaos Sword", "price": 10000, "damage": 250},
+        {"id": 14, "name": "Demonic Sword", "price": 12000, "damage": 300},
+        {"id": 15, "name": "Excalibur", "price": 15000, "damage": 400},
+    ],
+    "revival": [
+        {"id": 16, "name": "Revival Potion", "price": 500, "effect": "Revive with 20% HP"},
+        {"id": 17, "name": "Strong Revival Potion", "price": 1200, "effect": "Revive with 50% HP"},
+        {"id": 18, "name": "Phoenix Feather", "price": 2500, "effect": "Revive with 100% HP"},
+        {"id": 19, "name": "Life Scroll", "price": 3000, "effect": "Revive + 20% XP"},
+        {"id": 20, "name": "Divine Elixir", "price": 4000, "effect": "Revive with full stats"},
+        {"id": 21, "name": "Resurrection Stone", "price": 5000, "effect": "Revive 2 times"},
+        {"id": 22, "name": "Angel Tear", "price": 6500, "effect": "Revive + Shield for 1 turn"},
+        {"id": 23, "name": "Holy Water", "price": 7000, "effect": "Revive + Full HP"},
+        {"id": 24, "name": "God’s Blessing", "price": 9000, "effect": "Auto Revive once"},
+        {"id": 25, "name": "Immortal Charm", "price": 12000, "effect": "Revive + Invincible 1 turn"},
+    ],
+    "poison": [
+        {"id": 26, "name": "Poison Dagger", "price": 700, "damage": 15},
+        {"id": 27, "name": "Venom Bottle", "price": 1200, "damage": 25},
+        {"id": 28, "name": "Toxin Bomb", "price": 2000, "damage": 40},
+        {"id": 29, "name": "Paralysis Poison", "price": 2500, "damage": 50},
+        {"id": 30, "name": "Deadly Venom", "price": 3500, "damage": 80},
+        {"id": 31, "name": "Corruption Gas", "price": 4000, "damage": 100},
+        {"id": 32, "name": "Silent Killer", "price": 5000, "damage": 120},
+        {"id": 33, "name": "Toxic Arrow", "price": 6000, "damage": 140},
+        {"id": 34, "name": "Necro Venom", "price": 7500, "damage": 180},
+        {"id": 35, "name": "Plague Bomb", "price": 9000, "damage": 220},
+    ],
+    "special": [
+        {"id": 36, "name": "Hunter Key", "price": 300, "effect": "Unlock dungeons"},
+        {"id": 37, "name": "Magic Shield", "price": 2000, "effect": "Reduce damage 20%"},
+        {"id": 38, "name": "Golden Armor", "price": 5000, "effect": "Reduce damage 50%"},
+        {"id": 39, "name": "XP Booster", "price": 1500, "effect": "Gain double XP"},
+        {"id": 40, "name": "Lucky Charm", "price": 1200, "effect": "Increase drop rate"},
+        {"id": 41, "name": "Soul Orb", "price": 2500, "effect": "Extra summon power"},
+        {"id": 42, "name": "Dark Crystal", "price": 4000, "effect": "Boost poison attack"},
+        {"id": 43, "name": "Sacred Ring", "price": 6000, "effect": "Immune to poison 2 turns"},
+        {"id": 44, "name": "Teleport Scroll", "price": 1000, "effect": "Escape from battle"},
+        {"id": 45, "name": "Binding Chains", "price": 2000, "effect": "Stun enemy 1 turn"},
+        {"id": 46, "name": "Power Elixir", "price": 3000, "effect": "Increase damage 30%"},
+        {"id": 47, "name": "Stamina Potion", "price": 1500, "effect": "Restore 100 stamina"},
+        {"id": 48, "name": "Hunter Medal", "price": 500, "effect": "Collectible"},
+        {"id": 49, "name": "Dimensional Stone", "price": 7000, "effect": "Summon ally"},
+        {"id": 50, "name": "Time Relic", "price": 10000, "effect": "Take extra turn"},
+    ]
+}
+
 
 def buy_item(tg_id, item_id):
     user = get_user_by_tg(tg_id)
