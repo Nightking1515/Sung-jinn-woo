@@ -272,16 +272,18 @@ SHOP_ITEMS = {
     ]
 }
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import CallbackContext
+from telegram.ext import ContextTypes
 
 # /shop command
-def shop_cmd(update: Update, context: CallbackContext):
+async def shop_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
-        [InlineKeyboardButton("All Items", callback_data="shop_all")],
-        [InlineKeyboardButton("Swords", callback_data="shop_swords")],
-        [InlineKeyboardButton("Revival Items", callback_data="shop_revival")],
-        [InlineKeyboardButton("Poisons", callback_data="shop_poison")],
+        [InlineKeyboardButton("⚔️ Swords", callback_data="shop_swords")],
+        [InlineKeyboardButton("✨ Revival Items", callback_data="shop_revival")],
+        [InlineKeyboardButton("☠️ Poisons", callback_data="shop_poison")],
+        [InlineKeyboardButton("🎁 All Items", callback_data="shop_all")]
     ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text("🛒 Welcome to the Shop!\nChoose a category:", reply_markup=reply_markup)
 
     # top 10 most expensive items (across all categories)
     all_items = []
@@ -296,26 +298,40 @@ def shop_cmd(update: Update, context: CallbackContext):
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
 
-
 # Category selection handler
 async def shop_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()   # 👈 sabse pehle call karo
+    await query.answer()   # pehle answer bhejo
 
     category = query.data.replace("shop_", "")
 
-    if category in SHOP_ITEMS:
-        items = SHOP_ITEMS[category]
-        text = f"🛒 {category.capitalize()} Items:\n\n"
-        for item in items:
-            if "damage" in item:
-                text += f"⚔️ {item['name']} - {item['price']} coins | Damage: {item['damage']}\n"
-            elif "effect" in item:
-                text += f"✨ {item['name']} - {item['price']} coins | Effect: {item['effect']}\n"
-            else:
-                text += f"{item['name']} - {item['price']} coins\n"
+    # Agar "all" hai to sab category merge kardo
+    if category == "all":
+        text = "🛒 All Shop Items:\n\n"
+        for cat, items in SHOP_ITEMS.items():
+            text += f"\n--- {cat.capitalize()} ---\n"
+            for item in items:
+                if "damage" in item:
+                    text += f"⚔️ {item['name']} - {item['price']} coins | Damage: {item['damage']}\n"
+                elif "effect" in item:
+                    text += f"✨ {item['name']} - {item['price']} coins | Effect: {item['effect']}\n"
+                else:
+                    text += f"{item['name']} - {item['price']} coins\n"
+    else:
+        if category in SHOP_ITEMS:
+            items = SHOP_ITEMS[category]
+            text = f"🛒 {category.capitalize()} Items:\n\n"
+            for item in items:
+                if "damage" in item:
+                    text += f"⚔️ {item['name']} - {item['price']} coins | Damage: {item['damage']}\n"
+                elif "effect" in item:
+                    text += f"✨ {item['name']} - {item['price']} coins | Effect: {item['effect']}\n"
+                else:
+                    text += f"{item['name']} - {item['price']} coins\n"
+        else:
+            text = "❌ Invalid category."
 
-        await query.message.reply_text(text)
+    await query.message.reply_text(text)
 
 
 
@@ -1138,6 +1154,7 @@ def main():
     app.add_handler(CommandHandler("givewon", givewon_cmd))
     app.add_handler(CommandHandler("shop", shop_cmd))
     app.add_handler(CallbackQueryHandler(shop_callback, pattern="^shop_"))
+
 
   # scheduler for interest (runs daily)
     scheduler = BackgroundScheduler()
