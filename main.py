@@ -1119,7 +1119,7 @@ def main():
     app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("guide", guide_cmd))
     app.add_handler(CommandHandler("owner", owner_cmd))
-    app.add_handler(CommandHandler("givewon", givewon_cmd)
+    app.add_handler(CommandHandler("givewon", givewon_cmd))
 application.add_handler(CommandHandler("shop", shop))
 
     # scheduler for interest (runs daily) - for testing you can set seconds param
