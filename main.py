@@ -1119,7 +1119,9 @@ def main():
     app.add_handler(CommandHandler("guide", guide_cmd))
     app.add_handler(CommandHandler("owner", owner_cmd))
     app.add_handler(CommandHandler("givewon", givewon_cmd))
-    app.add_handler(CommandHandler("shop", shop))
+    app.add_handler(CommandHandler("shop", shop_cmd))
+    app.add_handler(CallbackQueryHandler(shop_callback, pattern="^shop_"))
+
   # scheduler for interest (runs daily)
     scheduler = BackgroundScheduler()
     scheduler.add_job(lambda: interest_job(conn), 'interval', minutes=1)
