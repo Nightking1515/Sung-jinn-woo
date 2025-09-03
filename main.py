@@ -1120,7 +1120,7 @@ def main():
     app.add_handler(CommandHandler("guide", guide_cmd))
     app.add_handler(CommandHandler("owner", owner_cmd))
     app.add_handler(CommandHandler("givewon", givewon_cmd))
-application.add_handler(CommandHandler("shop", shop))
+    application.add_handler(CommandHandler("shop", shop))
 
   # scheduler for interest (runs daily)
     scheduler = BackgroundScheduler()
