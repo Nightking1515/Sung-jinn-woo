@@ -208,144 +208,79 @@ def get_daily_tasks_for_user_id(user_id):
     c.execute("SELECT id,task_text,requirement,progress,is_completed,reward_won,reward_item FROM daily_tasks WHERE user_id=? AND assigned_date=?", (user_id, today))
     rows = c.fetchall(); conn.close()
     return rows
+# Shop items (grouped in categories, prices start from 10,000)
+shop_items = {
+    # --- Swords ---
+    "Iron_Sword": 10000,
+    "Bronze_Sword": 15000,
+    "Silver_Sword": 25000,
+    "Golden_Sword": 40000,
+    "Platinum_Sword": 60000,
+    "Diamond_Sword": 90000,
+    "Flame_Sword": 120000,
+    "Shadow_Sword": 150000,
+    "Dragon_Slayer": 200000,
+    "Excalibur": 300000,
 
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import ContextTypes
+    # --- Revival Items ---
+    "Small_Health_Potion": 10000,
+    "Medium_Health_Potion": 20000,
+    "Large_Health_Potion": 40000,
+    "Elixir_of_Life": 80000,
+    "Revival_Scroll": 120000,
+    "Phoenix_Feather": 160000,
+    "Angel_Tear": 200000,
+    "Divine_Blessing": 250000,
+    "Full_Revive_Stone": 350000,
+    "Immortal_Charm": 500000,
 
-# ---------------- SHOP ITEMS (your 50 with IDs) ----------------
-SHOP_ITEMS = {
-    "swords": [
-        {"id": 1, "name": "Iron Sword", "price": 200, "damage": 10},
-        {"id": 2, "name": "Steel Sword", "price": 500, "damage": 20},
-        {"id": 3, "name": "Silver Sword", "price": 800, "damage": 30},
-        {"id": 4, "name": "Magic Sword", "price": 1500, "damage": 50},
-        {"id": 5, "name": "Flame Sword", "price": 2200, "damage": 70},
-        {"id": 6, "name": "Ice Sword", "price": 2500, "damage": 80},
-        {"id": 7, "name": "Thunder Sword", "price": 3000, "damage": 100},
-        {"id": 8, "name": "Dark Sword", "price": 4000, "damage": 120},
-        {"id": 9, "name": "Light Sword", "price": 4200, "damage": 125},
-        {"id": 10, "name": "Dragon Slayer", "price": 5000, "damage": 150},
-        {"id": 11, "name": "Shadow Blade", "price": 6000, "damage": 180},
-        {"id": 12, "name": "Heavenly Sword", "price": 7500, "damage": 200},
-        {"id": 13, "name": "Chaos Sword", "price": 10000, "damage": 250},
-        {"id": 14, "name": "Demonic Sword", "price": 12000, "damage": 300},
-        {"id": 15, "name": "Excalibur", "price": 15000, "damage": 400},
-    ],
-    "revival": [
-        {"id": 16, "name": "Revival Potion", "price": 500, "effect": "Revive with 20% HP"},
-        {"id": 17, "name": "Strong Revival Potion", "price": 1200, "effect": "Revive with 50% HP"},
-        {"id": 18, "name": "Phoenix Feather", "price": 2500, "effect": "Revive with 100% HP"},
-        {"id": 19, "name": "Life Scroll", "price": 3000, "effect": "Revive + 20% XP"},
-        {"id": 20, "name": "Divine Elixir", "price": 4000, "effect": "Revive with full stats"},
-        {"id": 21, "name": "Resurrection Stone", "price": 5000, "effect": "Revive 2 times"},
-        {"id": 22, "name": "Angel Tear", "price": 6500, "effect": "Revive + Shield for 1 turn"},
-        {"id": 23, "name": "Holy Water", "price": 7000, "effect": "Revive + Full HP"},
-        {"id": 24, "name": "God’s Blessing", "price": 9000, "effect": "Auto Revive once"},
-        {"id": 25, "name": "Immortal Charm", "price": 12000, "effect": "Revive + Invincible 1 turn"},
-    ],
-    "poison": [
-        {"id": 26, "name": "Poison Dagger", "price": 700, "damage": 15},
-        {"id": 27, "name": "Venom Bottle", "price": 1200, "damage": 25},
-        {"id": 28, "name": "Toxin Bomb", "price": 2000, "damage": 40},
-        {"id": 29, "name": "Paralysis Poison", "price": 2500, "damage": 50},
-        {"id": 30, "name": "Deadly Venom", "price": 3500, "damage": 80},
-        {"id": 31, "name": "Corruption Gas", "price": 4000, "damage": 100},
-        {"id": 32, "name": "Silent Killer", "price": 5000, "damage": 120},
-        {"id": 33, "name": "Toxic Arrow", "price": 6000, "damage": 140},
-        {"id": 34, "name": "Necro Venom", "price": 7500, "damage": 180},
-        {"id": 35, "name": "Plague Bomb", "price": 9000, "damage": 220},
-    ],
-    "special": [
-        {"id": 36, "name": "Hunter Key", "price": 300, "effect": "Unlock dungeons"},
-        {"id": 37, "name": "Magic Shield", "price": 2000, "effect": "Reduce damage 20%"},
-        {"id": 38, "name": "Golden Armor", "price": 5000, "effect": "Reduce damage 50%"},
-        {"id": 39, "name": "XP Booster", "price": 1500, "effect": "Gain double XP"},
-        {"id": 40, "name": "Lucky Charm", "price": 1200, "effect": "Increase drop rate"},
-        {"id": 41, "name": "Soul Orb", "price": 2500, "effect": "Extra summon power"},
-        {"id": 42, "name": "Dark Crystal", "price": 4000, "effect": "Boost poison attack"},
-        {"id": 43, "name": "Sacred Ring", "price": 6000, "effect": "Immune to poison 2 turns"},
-        {"id": 44, "name": "Teleport Scroll", "price": 1000, "effect": "Escape from battle"},
-        {"id": 45, "name": "Binding Chains", "price": 2000, "effect": "Stun enemy 1 turn"},
-        {"id": 46, "name": "Power Elixir", "price": 3000, "effect": "Increase damage 30%"},
-        {"id": 47, "name": "Stamina Potion", "price": 1500, "effect": "Restore 100 stamina"},
-        {"id": 48, "name": "Hunter Medal", "price": 500, "effect": "Collectible"},
-        {"id": 49, "name": "Dimensional Stone", "price": 7000, "effect": "Summon ally"},
-        {"id": 50, "name": "Time Relic", "price": 10000, "effect": "Take extra turn"},
-    ]
+    # --- Poisons ---
+    "Rat_Poison": 10000,
+    "Snake_Venom": 30000,
+    "Scorpion_Toxin": 60000,
+    "Deadly_Spore": 100000,
+    "Cursed_Blood": 150000,
+    "Shadow_Poison": 200000,
+    "Nightmare_Toxin": 300000,
+    "Dragon_Poison": 400000,
+    "Demon_Venom": 500000,
+    "Apocalypse_Poison": 700000
 }
 
-def _flatten_all_items():
-    items = []
-    for cat_items in SHOP_ITEMS.values():
-        items.extend(cat_items)
-    return items
-
-def _format_item_line(item):
-    base = f"[{item['id']}] {item['name']} — ₩{item['price']}"
-    if "damage" in item:
-        return f"{base} | DMG {item['damage']}"
-    if "effect" in item:
-        return f"{base} | Effect: {item['effect']}"
-    return base
-
-# ---------------- /shop command ----------------
+# /shop command
 async def shop_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [
-        [InlineKeyboardButton("🔥 All Items", callback_data="shop_all")],
-        [
-            InlineKeyboardButton("⚔️ Swords", callback_data="shop_swords"),
-            InlineKeyboardButton("✨ Revival Items", callback_data="shop_revival"),
-        ],
-        [InlineKeyboardButton("☠️ Poisons", callback_data="shop_poison")],  # key name matches dict: "poison"
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    text = "🛒 Welcome to the Shop!\n\n"
 
-    # menu + buttons
-    await update.message.reply_text(
-        "🛒 Welcome to the Shop!\nChoose a category:",
-        reply_markup=reply_markup
-    )
+    text += "⚔️ Swords:\n"
+    for item, price in list(shop_items.items())[:10]:
+        text += f"{item.replace('_',' ')} - {price} coins\n"
 
-    # Top 10 expensive across ALL categories (includes 'special' as well)
-    all_items = _flatten_all_items()
-    top10 = sorted(all_items, key=lambda x: x["price"], reverse=True)[:10]
-    lines = [f"🔥 Top 10 (by price):"] + [_format_item_line(it) for it in top10]
-    await update.message.reply_text("\n".join(lines))
+    text += "\n✨ Revival Items:\n"
+    for item, price in list(shop_items.items())[10:20]:
+        text += f"{item.replace('_',' ')} - {price} coins\n"
 
-# ---------------- callback for category selection ----------------
-async def shop_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
+    text += "\n☠️ Poisons:\n"
+    for item, price in list(shop_items.items())[20:]:
+        text += f"{item.replace('_',' ')} - {price} coins\n"
 
-    cat = query.data.replace("shop_", "")  # "all", "swords", "revival", "poison"
-    if cat == "all":
-        items = _flatten_all_items()
-        header = "🛒 All Items"
-    else:
-        items = SHOP_ITEMS.get(cat, [])
-        header = f"🛒 {cat.capitalize()} Items"
+    await update.message.reply_text(text)
 
-    if not items:
-        await query.edit_message_text("❌ No items found in this category.")
+# /buy command
+async def buy_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.args:
+        await update.message.reply_text("❌ Usage: /buy <item name>")
         return
 
-    # show as numbered by ID for your /buy <id> flow
-    body = "\n".join(_format_item_line(it) for it in items)
-    footer = "\n\n💡 Buy with: /buy <id>\nExample: /buy 15"
-    await query.edit_message_text(f"{header}:\n\n{body}{footer}", disable_web_page_preview=True)
+    item_name = "_".join(context.args)
+    if item_name not in shop_items:
+        await update.message.reply_text("❌ Item not found in shop.")
+        return
 
-def buy_item(tg_id, item_id):
-    user = get_user_by_tg(tg_id)
-    if not user: return False, "User not found."
-    item = next((i for i in SHOP_ITEMS if i['id']==item_id), None)
-    if not item: return False, "Item not found."
-    if user['hand_won'] < item['price']:
-        return False, "Not enough Won in hand."
-    adjust_money(tg_id, hand_delta=-item['price'])
-    conn = db_conn(); c = conn.cursor()
-    c.execute("INSERT INTO inventory (user_id,item_type,name,quantity) VALUES (?,?,?,?)", (user['id'], item['type'], item['name'], 1))
-    conn.commit(); conn.close()
-    return True, f"Bought {item['name']} for {item['price']}₩."
+    price = shop_items[item_name]
+    await update.message.reply_text(
+        f"✅ You bought **{item_name.replace('_',' ')}** for {price} coins!"
+    )
+
 
 # ------------ PvP Logic & Matches ------------
 def compute_power(user):
@@ -1151,9 +1086,7 @@ def main():
     app.add_handler(CommandHandler("owner", owner_cmd))
     app.add_handler(CommandHandler("givewon", givewon_cmd))
     app.add_handler(CommandHandler("shop", shop_cmd))
-    app.add_handler(CallbackQueryHandler(shop_callback, pattern="^shop_"))
-
-
+    
   # scheduler for interest (runs daily)
     scheduler = BackgroundScheduler()
     scheduler.add_job(lambda: interest_job(conn), 'interval', minutes=1)
