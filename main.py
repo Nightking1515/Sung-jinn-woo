@@ -8,7 +8,6 @@ Solo Leveling style Telegram bot - full implementation for commands list.
 """
 
 import os
-import sqlite3
 import random
 import math
 from datetime import datetime, date, timedelta
@@ -20,6 +19,48 @@ from telegram import (
 from telegram.ext import (
     Application, CommandHandler, ContextTypes, CallbackQueryHandler, MessageHandler, filters
 )
+from telegram.ext import (
+    Application, CommandHandler, CallbackContext
+)
+
+# ---- PostgreSQL connection ----
+import psycopg2
+
+DATABASE_URL = os.environ["DATABASE_URL"]
+
+conn = psycopg2.connect(DATABASE_URL)
+cur = conn.cursor()
+
+cur.execute("""
+CREATE TABLE IF NOT EXISTS users (
+    user_id BIGINT PRIMARY KEY,
+    username TEXT,
+    level INT DEFAULT 0,
+    rank TEXT DEFAULT 'E',
+    won_in_hand BIGINT DEFAULT 0,
+    won_in_bank BIGINT DEFAULT 0,
+    xp BIGINT DEFAULT 0,
+    pvp_wins INT DEFAULT 0,
+    pvp_losses INT DEFAULT 0
+);
+""")
+
+cur.execute("""
+CREATE TABLE IF NOT EXISTS items (
+    item_id SERIAL PRIMARY KEY,
+    user_id BIGINT REFERENCES users(user_id),
+    item_name TEXT,
+    quantity INT DEFAULT 1
+);
+""")
+
+conn.commit()
+# --------------------------------
+
+# ---------------- CONFIG ----------------
+
+ADMIN_TG_ID = None
+...
 
 # --------------- CONFIG ---------------
 DB_PATH = "solo_bot.db"
