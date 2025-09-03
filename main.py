@@ -1122,13 +1122,14 @@ def main():
     app.add_handler(CommandHandler("givewon", givewon_cmd))
 application.add_handler(CommandHandler("shop", shop))
 
-    # scheduler for interest (runs daily) - for testing you can set seconds param
+  # scheduler for interest (runs daily)
     scheduler = BackgroundScheduler()
-    scheduler.add_job(lambda: interest_payout(app), 'interval', days=1, next_run_time=datetime.utcnow() + timedelta(seconds=10))
+    scheduler.add_job(lambda: interest_job(conn), 'interval', minutes=1)
     scheduler.start()
 
     print("Bot started.")
     app.run_polling()
+
 
 if __name__ == "__main__":
     main()
