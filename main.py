@@ -1102,7 +1102,6 @@ def main():
     app.add_handler(CommandHandler("repay", repay_cmd))
     app.add_handler(CommandHandler("myloan", myloan_cmd))
 
-    app.add_handler(CommandHandler("shop", shop_cmd))
     app.add_handler(CommandHandler("buy", buy_cmd))
     app.add_handler(CommandHandler("inventory", inventory_cmd))
     app.add_handler(CommandHandler("swards", swards_cmd))
@@ -1120,7 +1119,7 @@ def main():
     app.add_handler(CommandHandler("guide", guide_cmd))
     app.add_handler(CommandHandler("owner", owner_cmd))
     app.add_handler(CommandHandler("givewon", givewon_cmd))
-    
+    app.add_handler(CommandHandler("shop", shop))
   # scheduler for interest (runs daily)
     scheduler = BackgroundScheduler()
     scheduler.add_job(lambda: interest_job(conn), 'interval', minutes=1)
