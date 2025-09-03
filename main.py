@@ -297,30 +297,26 @@ def shop_cmd(update: Update, context: CallbackContext):
     update.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
 
 
-# shop callback for categories
-def shop_callback(update: Update, context: CallbackContext):
+# Category selection handler
+async def shop_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    query.answer()
+    await query.answer()   # 👈 sabse pehle call karo
 
-    data = query.data.replace("shop_", "")
+    category = query.data.replace("shop_", "")
 
-    if data == "all":
-        items = []
-        for category in SHOP_ITEMS.values():
-            items.extend(category)
-    else:
-        items = SHOP_ITEMS.get(data, [])
+    if category in SHOP_ITEMS:
+        items = SHOP_ITEMS[category]
+        text = f"🛒 {category.capitalize()} Items:\n\n"
+        for item in items:
+            if "damage" in item:
+                text += f"⚔️ {item['name']} - {item['price']} coins | Damage: {item['damage']}\n"
+            elif "effect" in item:
+                text += f"✨ {item['name']} - {item['price']} coins | Effect: {item['effect']}\n"
+            else:
+                text += f"{item['name']} - {item['price']} coins\n"
 
-    if not items:
-        query.edit_message_text("❌ No items found in this category.")
-        return
+        await query.message.reply_text(text)
 
-    text = f"🏪 **SHOP — {data.capitalize()}**\n\n"
-    for item in items:
-        price = item.get("price", 0)
-        text += f"➡️ {item['name']} — 💰 {price}\n"
-
-    query.edit_message_text(text, parse_mode="Markdown")
 
 
 
