@@ -271,36 +271,57 @@ SHOP_ITEMS = {
         {"id": 50, "name": "Time Relic", "price": 10000, "effect": "Take extra turn"},
     ]
 }
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import CommandHandler, CallbackQueryHandler
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import CallbackContext
 
-# Shop command
-def shop(update, context):
-    keyboard = []
-    for category, items in SHOP_ITEMS.items():
-        keyboard.append([InlineKeyboardButton(category.capitalize(), callback_data=f"shop_{category}")])
-    
+# /shop command
+def shop_cmd(update: Update, context: CallbackContext):
+    keyboard = [
+        [InlineKeyboardButton("All Items", callback_data="shop_all")],
+        [InlineKeyboardButton("Swords", callback_data="shop_swords")],
+        [InlineKeyboardButton("Revival Items", callback_data="shop_revival")],
+        [InlineKeyboardButton("Poisons", callback_data="shop_poison")],
+    ]
+
+    # top 10 most expensive items (across all categories)
+    all_items = []
+    for category in SHOP_ITEMS.values():
+        all_items.extend(category)
+    top_items = sorted(all_items, key=lambda x: x["price"], reverse=True)[:10]
+
+    text = "🏪 **SHOP**\n\n🔥 Top 10 Expensive Items:\n"
+    for item in top_items:
+        text += f"➡️ {item['name']} — 💰 {item['price']}\n"
+
     reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text("🛒 Welcome to the Shop! Choose a category:", reply_markup=reply_markup)
+    update.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
 
-# Category selection handler
-def shop_callback(update, context):
+
+# shop callback for categories
+def shop_callback(update: Update, context: CallbackContext):
     query = update.callback_query
-    category = query.data.replace("shop_", "")
-    
-    if category in SHOP_ITEMS:
-        items = SHOP_ITEMS[category]
-        text = f"🛒 {category.capitalize()} Items:\n\n"
-        for item in items:
-            if "damage" in item:
-                text += f"⚔️ {item['name']} - {item['price']} coins | Damage: {item['damage']}\n"
-            elif "effect" in item:
-                text += f"✨ {item['name']} - {item['price']} coins | Effect: {item['effect']}\n"
-            else:
-                text += f"{item['name']} - {item['price']} coins\n"
-        
-        query.message.reply_text(text)
     query.answer()
+
+    data = query.data.replace("shop_", "")
+
+    if data == "all":
+        items = []
+        for category in SHOP_ITEMS.values():
+            items.extend(category)
+    else:
+        items = SHOP_ITEMS.get(data, [])
+
+    if not items:
+        query.edit_message_text("❌ No items found in this category.")
+        return
+
+    text = f"🏪 **SHOP — {data.capitalize()}**\n\n"
+    for item in items:
+        price = item.get("price", 0)
+        text += f"➡️ {item['name']} — 💰 {price}\n"
+
+    query.edit_message_text(text, parse_mode="Markdown")
+
 
 
 def buy_item(tg_id, item_id):
