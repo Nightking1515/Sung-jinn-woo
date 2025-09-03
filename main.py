@@ -209,8 +209,10 @@ def get_daily_tasks_for_user_id(user_id):
     rows = c.fetchall(); conn.close()
     return rows
 
-# ------------ Shop items (simple) ------------
-# Shop items data
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.ext import ContextTypes
+
+# ---------------- SHOP ITEMS (your 50 with IDs) ----------------
 SHOP_ITEMS = {
     "swords": [
         {"id": 1, "name": "Iron Sword", "price": 200, "damage": 10},
@@ -271,67 +273,66 @@ SHOP_ITEMS = {
         {"id": 50, "name": "Time Relic", "price": 10000, "effect": "Take extra turn"},
     ]
 }
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import ContextTypes
 
-# /shop command
+def _flatten_all_items():
+    items = []
+    for cat_items in SHOP_ITEMS.values():
+        items.extend(cat_items)
+    return items
+
+def _format_item_line(item):
+    base = f"[{item['id']}] {item['name']} — ₩{item['price']}"
+    if "damage" in item:
+        return f"{base} | DMG {item['damage']}"
+    if "effect" in item:
+        return f"{base} | Effect: {item['effect']}"
+    return base
+
+# ---------------- /shop command ----------------
 async def shop_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
-        [InlineKeyboardButton("⚔️ Swords", callback_data="shop_swords")],
-        [InlineKeyboardButton("✨ Revival Items", callback_data="shop_revival")],
-        [InlineKeyboardButton("☠️ Poisons", callback_data="shop_poison")],
-        [InlineKeyboardButton("🎁 All Items", callback_data="shop_all")]
+        [InlineKeyboardButton("🔥 All Items", callback_data="shop_all")],
+        [
+            InlineKeyboardButton("⚔️ Swords", callback_data="shop_swords"),
+            InlineKeyboardButton("✨ Revival Items", callback_data="shop_revival"),
+        ],
+        [InlineKeyboardButton("☠️ Poisons", callback_data="shop_poison")],  # key name matches dict: "poison"
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("🛒 Welcome to the Shop!\nChoose a category:", reply_markup=reply_markup)
 
-    # top 10 most expensive items (across all categories)
-    all_items = []
-    for category in SHOP_ITEMS.values():
-        all_items.extend(category)
-    top_items = sorted(all_items, key=lambda x: x["price"], reverse=True)[:10]
+    # menu + buttons
+    await update.message.reply_text(
+        "🛒 Welcome to the Shop!\nChoose a category:",
+        reply_markup=reply_markup
+    )
 
-    text = "🏪 **SHOP**\n\n🔥 Top 10 Expensive Items:\n"
-    for item in top_items:
-        text += f"➡️ {item['name']} — 💰 {item['price']}\n"
+    # Top 10 expensive across ALL categories (includes 'special' as well)
+    all_items = _flatten_all_items()
+    top10 = sorted(all_items, key=lambda x: x["price"], reverse=True)[:10]
+    lines = [f"🔥 Top 10 (by price):"] + [_format_item_line(it) for it in top10]
+    await update.message.reply_text("\n".join(lines))
 
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
-
-# --- SHOP CALLBACK ---
-from telegram import Update
-from telegram.ext import ContextTypes
-
+# ---------------- callback for category selection ----------------
 async def shop_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()  # callback query ko acknowledge karna zaroori hai
+    await query.answer()
 
-    data = query.data  # Example: "shop_sword", "shop_shield"
-
-    if data == "shop_sword":
-        await query.edit_message_text(
-            "🗡 You selected **Sword**!\n\nPrice: 100 coins\n\nUse /buy sword to purchase.",
-            parse_mode="Markdown"
-        )
-
-    elif data == "shop_shield":
-        await query.edit_message_text(
-            "🛡 You selected **Shield**!\n\nPrice: 150 coins\n\nUse /buy shield to purchase.",
-            parse_mode="Markdown"
-        )
-
-    elif data == "shop_potion":
-        await query.edit_message_text(
-            "🧪 You selected **Potion**!\n\nPrice: 50 coins\n\nUse /buy potion to purchase.",
-            parse_mode="Markdown"
-        )
-
+    cat = query.data.replace("shop_", "")  # "all", "swords", "revival", "poison"
+    if cat == "all":
+        items = _flatten_all_items()
+        header = "🛒 All Items"
     else:
-        await query.edit_message_text("⚠ Invalid shop item selected.")
+        items = SHOP_ITEMS.get(cat, [])
+        header = f"🛒 {cat.capitalize()} Items"
 
+    if not items:
+        await query.edit_message_text("❌ No items found in this category.")
+        return
 
-
-
+    # show as numbered by ID for your /buy <id> flow
+    body = "\n".join(_format_item_line(it) for it in items)
+    footer = "\n\n💡 Buy with: /buy <id>\nExample: /buy 15"
+    await query.edit_message_text(f"{header}:\n\n{body}{footer}", disable_web_page_preview=True)
 
 def buy_item(tg_id, item_id):
     user = get_user_by_tg(tg_id)
