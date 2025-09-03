@@ -298,40 +298,37 @@ async def shop_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
 
-# Category selection handler
+# --- SHOP CALLBACK ---
+from telegram import Update
+from telegram.ext import ContextTypes
+
 async def shop_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()   # pehle answer bhejo
+    await query.answer()  # callback query ko acknowledge karna zaroori hai
 
-    category = query.data.replace("shop_", "")
+    data = query.data  # Example: "shop_sword", "shop_shield"
 
-    # Agar "all" hai to sab category merge kardo
-    if category == "all":
-        text = "🛒 All Shop Items:\n\n"
-        for cat, items in SHOP_ITEMS.items():
-            text += f"\n--- {cat.capitalize()} ---\n"
-            for item in items:
-                if "damage" in item:
-                    text += f"⚔️ {item['name']} - {item['price']} coins | Damage: {item['damage']}\n"
-                elif "effect" in item:
-                    text += f"✨ {item['name']} - {item['price']} coins | Effect: {item['effect']}\n"
-                else:
-                    text += f"{item['name']} - {item['price']} coins\n"
+    if data == "shop_sword":
+        await query.edit_message_text(
+            "🗡 You selected **Sword**!\n\nPrice: 100 coins\n\nUse /buy sword to purchase.",
+            parse_mode="Markdown"
+        )
+
+    elif data == "shop_shield":
+        await query.edit_message_text(
+            "🛡 You selected **Shield**!\n\nPrice: 150 coins\n\nUse /buy shield to purchase.",
+            parse_mode="Markdown"
+        )
+
+    elif data == "shop_potion":
+        await query.edit_message_text(
+            "🧪 You selected **Potion**!\n\nPrice: 50 coins\n\nUse /buy potion to purchase.",
+            parse_mode="Markdown"
+        )
+
     else:
-        if category in SHOP_ITEMS:
-            items = SHOP_ITEMS[category]
-            text = f"🛒 {category.capitalize()} Items:\n\n"
-            for item in items:
-                if "damage" in item:
-                    text += f"⚔️ {item['name']} - {item['price']} coins | Damage: {item['damage']}\n"
-                elif "effect" in item:
-                    text += f"✨ {item['name']} - {item['price']} coins | Effect: {item['effect']}\n"
-                else:
-                    text += f"{item['name']} - {item['price']} coins\n"
-        else:
-            text = "❌ Invalid category."
+        await query.edit_message_text("⚠ Invalid shop item selected.")
 
-    await query.message.reply_text(text)
 
 
 
