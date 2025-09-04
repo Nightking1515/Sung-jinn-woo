@@ -208,80 +208,25 @@ def get_daily_tasks_for_user_id(user_id):
     c.execute("SELECT id,task_text,requirement,progress,is_completed,reward_won,reward_item FROM daily_tasks WHERE user_id=? AND assigned_date=?", (user_id, today))
     rows = c.fetchall(); conn.close()
     return rows
-# Shop items (grouped in categories, prices start from 10,000)
-shop_items = {
-    # --- Swords ---
-    "Iron_Sword": 10000,
-    "Bronze_Sword": 15000,
-    "Silver_Sword": 25000,
-    "Golden_Sword": 40000,
-    "Platinum_Sword": 60000,
-    "Diamond_Sword": 90000,
-    "Flame_Sword": 120000,
-    "Shadow_Sword": 150000,
-    "Dragon_Slayer": 200000,
-    "Excalibur": 300000,
+# ---------- SHOP ----------
+SHOP_ITEMS = [
+    {"id":1, "name":"Health Potion", "type":"consumable", "price":50},
+    {"id":2, "name":"Stamina Potion", "type":"consumable", "price":50},
+    {"id":3, "name":"Basic Sword", "type":"sword", "price":200},
+    {"id":4, "name":"Revival Shard", "type":"revival", "price":500},
+]
 
-    # --- Revival Items ---
-    "Small_Health_Potion": 10000,
-    "Medium_Health_Potion": 20000,
-    "Large_Health_Potion": 40000,
-    "Elixir_of_Life": 80000,
-    "Revival_Scroll": 120000,
-    "Phoenix_Feather": 160000,
-    "Angel_Tear": 200000,
-    "Divine_Blessing": 250000,
-    "Full_Revive_Stone": 350000,
-    "Immortal_Charm": 500000,
-
-    # --- Poisons ---
-    "Rat_Poison": 10000,
-    "Snake_Venom": 30000,
-    "Scorpion_Toxin": 60000,
-    "Deadly_Spore": 100000,
-    "Cursed_Blood": 150000,
-    "Shadow_Poison": 200000,
-    "Nightmare_Toxin": 300000,
-    "Dragon_Poison": 400000,
-    "Demon_Venom": 500000,
-    "Apocalypse_Poison": 700000
-}
-
-# /shop command
-async def shop_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = "🛒 Welcome to the Shop!\n\n"
-
-    text += "⚔️ Swords:\n"
-    for item, price in list(shop_items.items())[:10]:
-        text += f"{item.replace('_',' ')} - {price} won\n"
-
-    text += "\n✨ Revival Items:\n"
-    for item, price in list(shop_items.items())[10:20]:
-        text += f"{item.replace('_',' ')} - {price} won\n"
-
-    text += "\n☠️ Poisons:\n"
-    for item, price in list(shop_items.items())[20:]:
-        text += f"{item.replace('_',' ')} - {price} won\n"
-
-    await update.message.reply_text(text)
-
-# /buy command
-async def buy_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not context.args:
-        await update.message.reply_text("❌ Usage: /buy <item name>")
-        return
-
-    item_name = "_".join(context.args)
-    if item_name not in shop_items:
-        await update.message.reply_text("❌ Item not found in shop.")
-        return
-
-    price = shop_items[item_name]
-    await update.message.reply_text(
-        f"✅ You bought **{item_name.replace('_',' ')}** for {price} won!"
-    )
-
-
+def buy_item_for_user(tg_id, item_id):
+    item = next((i for i in SHOP_ITEMS if i['id']==item_id), None)
+    if not item: return False, "Item not found."
+    user = get_user(tg_id)
+    if user['hand_won'] < item['price']: return False, "Not enough Won in hand."
+    # deduct and add to inventory
+    adjust_money(tg_id, hand_delta=-item['price'])
+    conn = db_conn(); c = conn.cursor()
+    c.execute("INSERT INTO inventory (user_id, item_type, name, quantity) VALUES (?,?,?,?)", (user['id'], item['type'], item['name'], 1))
+    conn.commit(); conn.close()
+    return True, f"Bought {item['name']} for {item['price']}₩."
 # ------------ PvP Logic & Matches ------------
 def compute_power(user):
     # simple power function: rank weight + level * factor + stats contribution
