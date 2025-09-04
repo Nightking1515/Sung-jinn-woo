@@ -216,7 +216,7 @@ SHOP_ITEMS = [
     {"id":4, "name":"Revival Shard", "type":"revival", "price":500},
 ]
 
-def buy_item_for_user(tg_id, item_name):
+def buy_item_for_user(tg_id, item name):
     item = next((i for i in SHOP_ITEMS if i['id']==item_id), None)
     if not item: return False, "Item not found."
     user = get_user(tg_id)
