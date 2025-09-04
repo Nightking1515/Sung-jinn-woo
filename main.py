@@ -253,15 +253,15 @@ async def shop_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text += "⚔️ Swords:\n"
     for item, price in list(shop_items.items())[:10]:
-        text += f"{item.replace('_',' ')} - {price} coins\n"
+        text += f"{item.replace('_',' ')} - {price} won\n"
 
     text += "\n✨ Revival Items:\n"
     for item, price in list(shop_items.items())[10:20]:
-        text += f"{item.replace('_',' ')} - {price} coins\n"
+        text += f"{item.replace('_',' ')} - {price} won\n"
 
     text += "\n☠️ Poisons:\n"
     for item, price in list(shop_items.items())[20:]:
-        text += f"{item.replace('_',' ')} - {price} coins\n"
+        text += f"{item.replace('_',' ')} - {price} won\n"
 
     await update.message.reply_text(text)
 
@@ -278,7 +278,7 @@ async def buy_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     price = shop_items[item_name]
     await update.message.reply_text(
-        f"✅ You bought **{item_name.replace('_',' ')}** for {price} coins!"
+        f"✅ You bought **{item_name.replace('_',' ')}** for {price} won!"
     )
 
 
