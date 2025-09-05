@@ -77,47 +77,6 @@ def update_coins(user_id, coins):
         (coins, user_id)
     )
     conn.commit()
-
-# -------------------------
-# Bot commands (async)
-# -------------------------
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    username = update.effective_user.username or "Unknown"
-    add_user(user_id, username)
-    await update.message.reply_text("✅ Welcome! Your profile has been created.")
-
-async def profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    user = get_user(user_id)
-    if user:
-        reply = (
-            f"👤 Username: {user[1]}\n"
-            f"⭐ Level: {user[2]}\n"
-            f"🏅 Rank: {user[3]}\n"
-            f"💰 Coins in Hand: {user[4]}\n"
-            f"🏦 Coins in Bank: {user[5]}\n"
-            f"⚡ XP: {user[6]}\n"
-            f"⚔️ PvP Wins: {user[7]} | ❌ Losses: {user[8]}"
-        )
-        await update.message.reply_text(reply)
-    else:
-        await update.message.reply_text("❌ You are not registered. Use /start first.")
-
-async def addcoins(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    if len(context.args) == 0:
-        await update.message.reply_text("⚠️ Usage: /addcoins <amount>")
-        return
-
-    try:
-        coins = int(context.args[0])
-        update_coins(user_id, coins)
-        await update.message.reply_text(f"✅ Added {coins} coins to your account!")
-    except ValueError:
-        await update.message.reply_text("❌ Please enter a valid number.")
-
 # -------------------------
 # Main function
 # -------------------------
