@@ -991,22 +991,74 @@ async def myloan_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u = get_user_by_tg(update.effective_user.id)
     await update.message.reply_text(f"Active Loan: {u['loan_amount']}₩")
 
-# ---------------- /shop ----------------
+# ---------------- argument-based /shop ----------------
 @only_for_registered
 async def shop_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = "🛒 Shop Items (1–50):\n"
-    for cat_items in SHOP_ITEMS.values():
-        for it in cat_items:
-            line = f"[{it['id']}] {it['name']} — ₩{it['price']}"
-            if "damage" in it:
-                line += f" | DMG {it['damage']}"
-            if "effect" in it:
-                line += f" | Effect: {it['effect']}"
-            text += line + "\n"
-    text += "\n💡 Buy with: /buy <item_id>"
-    await update.message.reply_text(text)
+    if not context.args:
+        # Agar argument nahi diya hai to category choose karne wala UI bhejenge
+        keyboard = [
+            [InlineKeyboardButton("🔥 All Items", callback_data="shop_all")],
+            [InlineKeyboardButton("⚔️ Swords", callback_data="shop_swords"),
+             InlineKeyboardButton("✨ Revival Items", callback_data="shop_revival")],
+            [InlineKeyboardButton("☠️ Poisons", callback_data="shop_poison")],
+        ]
+        await update.message.reply_text(
+            "🛒 Welcome to the Shop!\nChoose a category or use /shop <category> (all, swords, revival, poison).",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+        # Top 10 items by price
+        top10 = sorted(_flatten_all_items(), key=lambda x: x["price"], reverse=True)[:10]
+        lines = ["🔥 Top 10 (by price):"] + [_format_item_line(it) for it in top10]
+        await update.message.reply_text("\n".join(lines))
+        return
+
+    # Agar argument diya hai (category)
+    cat = context.args[0].lower()
+    if cat == "all":
+        items = _flatten_all_items()
+        header = "🛒 All Items"
+    elif cat in SHOP_ITEMS:
+        items = SHOP_ITEMS[cat]
+        header = f"🛒 {cat.capitalize()} Items"
+    else:
+        await update.message.reply_text("❌ Invalid category. Use: all, swords, revival, poison")
+        return
+
+    if not items:
+        await update.message.reply_text("❌ No items found.")
+        return
+
+    body = "\n".join(_format_item_line(it) for it in items)
+    footer = "\n\n💡 Buy with: /buy <id or name>"
+    await update.message.reply_text(f"{header}:\n\n{body}{footer}", disable_web_page_preview=True)
 
 
+# ---------------- argument-based /buy ----------------
+@only_for_registered
+async def buy_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.args:
+        await update.message.reply_text("Usage: /buy <item_id or item_name>")
+        return
+
+    query = " ".join(context.args).strip().lower()
+
+    # Try as ID
+    item = None
+    if query.isdigit():
+        iid = int(query)
+        item = _get_item_by_id(iid)
+
+    # Try as name (if ID didn’t match)
+    if not item:
+        item = next((i for i in _flatten_all_items() if i["name"].lower() == query), None)
+
+    if not item:
+        await update.message.reply_text("❌ Item not found.")
+        return
+
+    ok, msg = buy_item(update.effective_user.id, item["id"])
+    await update.message.reply_text(msg)
 # ---------------- argument-based /buy ----------------
 def _get_item_by_id(iid: int):
     for cat_items in SHOP_ITEMS.values():
