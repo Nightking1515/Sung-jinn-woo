@@ -34,7 +34,7 @@ import os
 BOT_TOKEN = "8050711631:AAEOmQtI1LDg8F5zBST1tIPh0mDtHbIISEs"
 
 # Database connection
-DATABASE_URL = postgresql://sung_jinn_woo_user:VNrgXB6U3XMLllxX711mDg04YAVxZsko@dpg-d2rfgs75r7bs73c0an2g-a/sung_jinn_woo
+DATABASE_URL = "postgresql://sung_jinn_woo_user:VNrgXB6U3XMLllxX711mDg04YAVxZsko@dpg-d2rfgs75r7bs73c0an2g-a/sung_jinn_woo"
 conn = psycopg2.connect(DATABASE_URL)
 cur = conn.cursor()
 
