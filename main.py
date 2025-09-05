@@ -1007,26 +1007,68 @@ async def shop_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text)
 
 
-# ---------------- /buy ----------------
+# ---------------- argument-based /buy ----------------
+def _get_item_by_id(iid: int):
+    for cat_items in SHOP_ITEMS.values():
+        for it in cat_items:
+            if it["id"] == iid:
+                return it
+    return None
+
 @only_for_registered
 async def buy_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
-        await update.message.reply_text("Usage: /buy <item_id>")
+        await update.message.reply_text("Usage: /buy <item_id>\nExample: /buy 15")
         return
 
     try:
-        iid = int(context.args[0])
-    except:
+        item_id = int(context.args[0])
+    except ValueError:
         await update.message.reply_text("❌ Item id must be a number.")
         return
 
-    item = _get_item_by_id(iid)
+    item = _get_item_by_id(item_id)
     if not item:
-        await update.message.reply_text("❌ Item not found.")
+        await update.message.reply_text("❌ Item not found in shop.")
         return
 
-    ok, msg = buy_item(update.effective_user.id, iid)
-    await update.message.reply_text(msg)
+    # confirmation buttons
+    kb = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("✅ Yes", callback_data=f"buy_confirm_{item_id}"),
+            InlineKeyboardButton("❌ No", callback_data="buy_cancel")
+        ]
+    ])
+
+    details = f"🛒 {item['name']} — ₩{item['price']}"
+    if "damage" in item:
+        details += f"\nDMG: {item['damage']}"
+    if "effect" in item:
+        details += f"\nEffect: {item['effect']}"
+
+    await update.message.reply_text(
+        f"{details}\n\nDo you want to buy this item?",
+        reply_markup=kb
+    )
+
+# ---------------- callbacks (shared with button system) ----------------
+async def buy_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    data = query.data
+
+    if data.startswith("buy_confirm_"):
+        item_id = int(data.split("_")[2])
+        try:
+            ok, msg = buy_item(update.effective_user.id, item_id)  # <-- your function
+        except NameError:
+            ok, msg = False, "⚠️ buy_item(tg_id, item_id) function not found."
+        await query.edit_message_text(msg)
+        return
+
+    if data == "buy_cancel":
+        await query.edit_message_text("❌ Purchase cancelled.")
+        return
 
 # /inventory, /swards, /revivalitem
 @only_for_registered
