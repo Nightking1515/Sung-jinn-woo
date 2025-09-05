@@ -24,14 +24,20 @@ from telegram.ext import (
     Application, CommandHandler, CallbackContext
 )
 
-# ---- PostgreSQL connection ----
+import os
 import psycopg2
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
+# Telegram bot token (Render env me set karo)
+TOKEN = os.environ["BOT_TOKEN"]
+
+# Database connection
 DATABASE_URL = os.environ["DATABASE_URL"]
-
 conn = psycopg2.connect(DATABASE_URL)
 cur = conn.cursor()
 
+# Create table if not exists
 cur.execute("""
 CREATE TABLE IF NOT EXISTS users (
     user_id BIGINT PRIMARY KEY,
@@ -45,18 +51,88 @@ CREATE TABLE IF NOT EXISTS users (
     pvp_losses INT DEFAULT 0
 );
 """)
-
-cur.execute("""
-CREATE TABLE IF NOT EXISTS items (
-    item_id SERIAL PRIMARY KEY,
-    user_id BIGINT REFERENCES users(user_id),
-    item_name TEXT,
-    quantity INT DEFAULT 1
-);
-""")
-
 conn.commit()
-# --------------------------------
+
+# -------------------------
+# Database functions
+# -------------------------
+
+def add_user(user_id, username):
+    cur.execute("SELECT * FROM users WHERE user_id = %s", (user_id,))
+    user = cur.fetchone()
+    if not user:
+        cur.execute(
+            "INSERT INTO users (user_id, username) VALUES (%s, %s)",
+            (user_id, username)
+        )
+        conn.commit()
+
+def get_user(user_id):
+    cur.execute("SELECT * FROM users WHERE user_id = %s", (user_id,))
+    return cur.fetchone()
+
+def update_coins(user_id, coins):
+    cur.execute(
+        "UPDATE users SET won_in_hand = won_in_hand + %s WHERE user_id = %s",
+        (coins, user_id)
+    )
+    conn.commit()
+
+# -------------------------
+# Bot commands (async)
+# -------------------------
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    username = update.effective_user.username or "Unknown"
+    add_user(user_id, username)
+    await update.message.reply_text("✅ Welcome! Your profile has been created.")
+
+async def profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    user = get_user(user_id)
+    if user:
+        reply = (
+            f"👤 Username: {user[1]}\n"
+            f"⭐ Level: {user[2]}\n"
+            f"🏅 Rank: {user[3]}\n"
+            f"💰 Coins in Hand: {user[4]}\n"
+            f"🏦 Coins in Bank: {user[5]}\n"
+            f"⚡ XP: {user[6]}\n"
+            f"⚔️ PvP Wins: {user[7]} | ❌ Losses: {user[8]}"
+        )
+        await update.message.reply_text(reply)
+    else:
+        await update.message.reply_text("❌ You are not registered. Use /start first.")
+
+async def addcoins(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if len(context.args) == 0:
+        await update.message.reply_text("⚠️ Usage: /addcoins <amount>")
+        return
+
+    try:
+        coins = int(context.args[0])
+        update_coins(user_id, coins)
+        await update.message.reply_text(f"✅ Added {coins} coins to your account!")
+    except ValueError:
+        await update.message.reply_text("❌ Please enter a valid number.")
+
+# -------------------------
+# Main function
+# -------------------------
+
+def main():
+    app = ApplicationBuilder().token(TOKEN).build()
+
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("profile", profile))
+    app.add_handler(CommandHandler("addcoins", addcoins))
+
+    app.run_polling()
+
+if __name__ == "__main__":
+    main()
 
 # ---------------- CONFIG ----------------
 
