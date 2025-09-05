@@ -123,7 +123,7 @@ async def addcoins(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # -------------------------
 
 def main():
-    app = ApplicationBuilder().token(TOKEN).build()
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("profile", profile))
