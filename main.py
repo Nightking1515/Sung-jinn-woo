@@ -30,7 +30,6 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 # Telegram bot token (Render env me set karo)
-import os
 BOT_TOKEN = "8050711631:AAEOmQtI1LDg8F5zBST1tIPh0mDtHbIISEs"
 
 # Database connection
