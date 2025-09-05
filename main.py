@@ -77,21 +77,6 @@ def update_coins(user_id, coins):
         (coins, user_id)
     )
     conn.commit()
-# -------------------------
-# Main function
-# -------------------------
-
-def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("profile", profile))
-    app.add_handler(CommandHandler("addcoins", addcoins))
-
-    app.run_polling()
-
-if __name__ == "__main__":
-    main()
 
 # ---------------- CONFIG ----------------
 
