@@ -208,25 +208,213 @@ def get_daily_tasks_for_user_id(user_id):
     c.execute("SELECT id,task_text,requirement,progress,is_completed,reward_won,reward_item FROM daily_tasks WHERE user_id=? AND assigned_date=?", (user_id, today))
     rows = c.fetchall(); conn.close()
     return rows
-# ---------- SHOP ----------
-SHOP_ITEMS = [
-    {"id":1, "name":"Health Potion", "type":"consumable", "price":50},
-    {"id":2, "name":"Stamina Potion", "type":"consumable", "price":50},
-    {"id":3, "name":"Basic Sword", "type":"sword", "price":200},
-    {"id":4, "name":"Revival Shard", "type":"revival", "price":500},
-]
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.ext import ContextTypes
 
-def buy_item_for_user(tg_id, item name):
-    item = next((i for i in SHOP_ITEMS if i['id']==item_id), None)
-    if not item: return False, "Item not found."
-    user = get_user(tg_id)
-    if user['hand_won'] < item['price']: return False, "Not enough Won in hand."
-    # deduct and add to inventory
-    adjust_money(tg_id, hand_delta=-item['price'])
-    conn = db_conn(); c = conn.cursor()
-    c.execute("INSERT INTO inventory (user_id, item_type, name, quantity) VALUES (?,?,?,?)", (user['id'], item['type'], item['name'], 1))
-    conn.commit(); conn.close()
-    return True, f"Bought {item['name']} for {item['price']}₩."
+# ---------------- SHOP ITEMS (50, with IDs) ----------------
+SHOP_ITEMS = {
+    "swords": [
+        {"id": 1, "name": "Iron Sword", "price": 200, "damage": 10},
+        {"id": 2, "name": "Steel Sword", "price": 500, "damage": 20},
+        {"id": 3, "name": "Silver Sword", "price": 800, "damage": 30},
+        {"id": 4, "name": "Magic Sword", "price": 1500, "damage": 50},
+        {"id": 5, "name": "Flame Sword", "price": 2200, "damage": 70},
+        {"id": 6, "name": "Ice Sword", "price": 2500, "damage": 80},
+        {"id": 7, "name": "Thunder Sword", "price": 3000, "damage": 100},
+        {"id": 8, "name": "Dark Sword", "price": 4000, "damage": 120},
+        {"id": 9, "name": "Light Sword", "price": 4200, "damage": 125},
+        {"id": 10, "name": "Dragon Slayer", "price": 5000, "damage": 150},
+        {"id": 11, "name": "Shadow Blade", "price": 6000, "damage": 180},
+        {"id": 12, "name": "Heavenly Sword", "price": 7500, "damage": 200},
+        {"id": 13, "name": "Chaos Sword", "price": 10000, "damage": 250},
+        {"id": 14, "name": "Demonic Sword", "price": 12000, "damage": 300},
+        {"id": 15, "name": "Excalibur", "price": 15000, "damage": 400},
+    ],
+    "revival": [
+        {"id": 16, "name": "Revival Potion", "price": 500, "effect": "Revive with 20% HP"},
+        {"id": 17, "name": "Strong Revival Potion", "price": 1200, "effect": "Revive with 50% HP"},
+        {"id": 18, "name": "Phoenix Feather", "price": 2500, "effect": "Revive with 100% HP"},
+        {"id": 19, "name": "Life Scroll", "price": 3000, "effect": "Revive + 20% XP"},
+        {"id": 20, "name": "Divine Elixir", "price": 4000, "effect": "Revive with full stats"},
+        {"id": 21, "name": "Resurrection Stone", "price": 5000, "effect": "Revive 2 times"},
+        {"id": 22, "name": "Angel Tear", "price": 6500, "effect": "Revive + Shield for 1 turn"},
+        {"id": 23, "name": "Holy Water", "price": 7000, "effect": "Revive + Full HP"},
+        {"id": 24, "name": "God’s Blessing", "price": 9000, "effect": "Auto Revive once"},
+        {"id": 25, "name": "Immortal Charm", "price": 12000, "effect": "Revive + Invincible 1 turn"},
+    ],
+    "poison": [
+        {"id": 26, "name": "Poison Dagger", "price": 700, "damage": 15},
+        {"id": 27, "name": "Venom Bottle", "price": 1200, "damage": 25},
+        {"id": 28, "name": "Toxin Bomb", "price": 2000, "damage": 40},
+        {"id": 29, "name": "Paralysis Poison", "price": 2500, "damage": 50},
+        {"id": 30, "name": "Deadly Venom", "price": 3500, "damage": 80},
+        {"id": 31, "name": "Corruption Gas", "price": 4000, "damage": 100},
+        {"id": 32, "name": "Silent Killer", "price": 5000, "damage": 120},
+        {"id": 33, "name": "Toxic Arrow", "price": 6000, "damage": 140},
+        {"id": 34, "name": "Necro Venom", "price": 7500, "damage": 180},
+        {"id": 35, "name": "Plague Bomb", "price": 9000, "damage": 220},
+    ],
+    "special": [
+        {"id": 36, "name": "Hunter Key", "price": 300, "effect": "Unlock dungeons"},
+        {"id": 37, "name": "Magic Shield", "price": 2000, "effect": "Reduce damage 20%"},
+        {"id": 38, "name": "Golden Armor", "price": 5000, "effect": "Reduce damage 50%"},
+        {"id": 39, "name": "XP Booster", "price": 1500, "effect": "Gain double XP"},
+        {"id": 40, "name": "Lucky Charm", "price": 1200, "effect": "Increase drop rate"},
+        {"id": 41, "name": "Soul Orb", "price": 2500, "effect": "Extra summon power"},
+        {"id": 42, "name": "Dark Crystal", "price": 4000, "effect": "Boost poison attack"},
+        {"id": 43, "name": "Sacred Ring", "price": 6000, "effect": "Immune to poison 2 turns"},
+        {"id": 44, "name": "Teleport Scroll", "price": 1000, "effect": "Escape from battle"},
+        {"id": 45, "name": "Binding Chains", "price": 2000, "effect": "Stun enemy 1 turn"},
+        {"id": 46, "name": "Power Elixir", "price": 3000, "effect": "Increase damage 30%"},
+        {"id": 47, "name": "Stamina Potion", "price": 1500, "effect": "Restore 100 stamina"},
+        {"id": 48, "name": "Hunter Medal", "price": 500, "effect": "Collectible"},
+        {"id": 49, "name": "Dimensional Stone", "price": 7000, "effect": "Summon ally"},
+        {"id": 50, "name": "Time Relic", "price": 10000, "effect": "Take extra turn"},
+    ]
+}
+
+def _flatten_all_items():
+    items = []
+    for cat_items in SHOP_ITEMS.values():
+        items.extend(cat_items)
+    return items
+
+def _format_item_line(item):
+    base = f"[{item['id']}] {item['name']} — ₩{item['price']}"
+    if "damage" in item:
+        return f"{base} | DMG {item['damage']}"
+    if "effect" in item:
+        return f"{base} | Effect: {item['effect']}"
+    return base
+
+# ---------------- /shop ----------------
+async def shop_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        [InlineKeyboardButton("🔥 All Items", callback_data="shop_all")],
+        [InlineKeyboardButton("⚔️ Swords", callback_data="shop_swords"),
+         InlineKeyboardButton("✨ Revival Items", callback_data="shop_revival")],
+        [InlineKeyboardButton("☠️ Poisons", callback_data="shop_poison")],
+    ]
+    await update.message.reply_text(
+        "🛒 Welcome to the Shop!\nChoose a category:",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+    # Top 10 (by price) – across all categories
+    top10 = sorted(_flatten_all_items(), key=lambda x: x["price"], reverse=True)[:10]
+    lines = ["🔥 Top 10 (by price):"] + [_format_item_line(it) for it in top10]
+    await update.message.reply_text("\n".join(lines))
+
+# ---------------- callback for /shop categories ----------------
+async def shop_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    cat = query.data.replace("shop_", "")  # "all" | "swords" | "revival" | "poison"
+    if cat == "all":
+        items = _flatten_all_items()
+        header = "🛒 All Items"
+    else:
+        items = SHOP_ITEMS.get(cat, [])
+        header = f"🛒 {cat.capitalize()} Items"
+
+    if not items:
+        await query.edit_message_text("❌ No items found in this category.")
+        return
+
+    body = "\n".join(_format_item_line(it) for it in items)
+    footer = "\n\n💡 Buy with: /buy\n(then pick item number)"
+    await query.edit_message_text(f"{header}:\n\n{body}{footer}", disable_web_page_preview=True)
+
+# ---------------- /buy (pagination 1–50) ----------------
+def _get_item_by_id(iid: int):
+    for cat_items in SHOP_ITEMS.values():
+        for it in cat_items:
+            if it["id"] == iid:
+                return it
+    return None
+
+def _build_buy_keyboard(start=1, per_page=10):
+    # 1..50 numbers pages
+    buttons = []
+    end = min(start + per_page - 1, 50)
+    row = []
+    for i in range(start, end + 1):
+        row.append(InlineKeyboardButton(str(i), callback_data=f"buy_select_{i}"))
+        if len(row) == 5:       # 5 buttons per row (2 rows = 10 numbers)
+            buttons.append(row)
+            row = []
+    if row:
+        buttons.append(row)
+
+    nav = []
+    if start > 1:
+        nav.append(InlineKeyboardButton("⬅️ Prev", callback_data=f"buy_page_{max(1, start-10)}"))
+    if end < 50:
+        nav.append(InlineKeyboardButton("➡️ Next", callback_data=f"buy_page_{end+1}"))
+    if nav:
+        buttons.append(nav)
+
+    return InlineKeyboardMarkup(buttons)
+
+async def buy_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "🛒 Choose item number to buy:",
+        reply_markup=_build_buy_keyboard(1)
+    )
+
+# ---------------- callbacks for /buy ----------------
+async def buy_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    data = query.data
+
+    # page navigation
+    if data.startswith("buy_page_"):
+        start = int(data.split("_")[2])
+        await query.edit_message_text(
+            "🛒 Choose item number to buy:",
+            reply_markup=_build_buy_keyboard(start)
+        )
+        return
+
+    # item chosen
+    if data.startswith("buy_select_"):
+        item_id = int(data.split("_")[2])
+        item = _get_item_by_id(item_id)
+        if not item:
+            await query.edit_message_text("❌ Item not found.")
+            return
+
+        kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("✅ Yes", callback_data=f"buy_confirm_{item_id}"),
+             InlineKeyboardButton("❌ No", callback_data="buy_cancel")]
+        ])
+        details = f"🛒 {item['name']} — ₩{item['price']}"
+        if "damage" in item:
+            details += f"\nDMG: {item['damage']}"
+        if "effect" in item:
+            details += f"\nEffect: {item['effect']}"
+        await query.edit_message_text(f"{details}\n\nDo you want to buy this item?", reply_markup=kb)
+        return
+
+    # confirm purchase → use your existing buy_item(tg_id, item_id)
+    if data.startswith("buy_confirm_"):
+        item_id = int(data.split("_")[2])
+        try:
+            ok, msg = buy_item(update.effective_user.id, item_id)  # <-- your function
+        except NameError:
+            # Safety message if buy_item() not found
+            ok = False
+            msg = "⚠️ buy_item(tg_id, item_id) function not found in this project."
+        await query.edit_message_text(msg)
+        return
+
+    # cancel
+    if data == "buy_cancel":
+        await query.edit_message_text("❌ Purchase cancelled.")
+        return
+
 # ------------ PvP Logic & Matches ------------
 def compute_power(user):
     # simple power function: rank weight + level * factor + stats contribution
@@ -803,25 +991,40 @@ async def myloan_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u = get_user_by_tg(update.effective_user.id)
     await update.message.reply_text(f"Active Loan: {u['loan_amount']}₩")
 
-# /shop and /buy
+# ---------------- /shop ----------------
 @only_for_registered
 async def shop_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = "Shop Items:\n"
-    for it in SHOP_ITEMS:
-        text += f"{it['id']}. {it['name']} - {it['price']}₩ ({it['type']})\n"
-    text += "\nBuy with /buy <item_id>"
+    text = "🛒 Shop Items (1–50):\n"
+    for cat_items in SHOP_ITEMS.values():
+        for it in cat_items:
+            line = f"[{it['id']}] {it['name']} — ₩{it['price']}"
+            if "damage" in it:
+                line += f" | DMG {it['damage']}"
+            if "effect" in it:
+                line += f" | Effect: {it['effect']}"
+            text += line + "\n"
+    text += "\n💡 Buy with: /buy <item_id>"
     await update.message.reply_text(text)
 
+
+# ---------------- /buy ----------------
 @only_for_registered
 async def buy_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
         await update.message.reply_text("Usage: /buy <item_id>")
         return
+
     try:
         iid = int(context.args[0])
     except:
-        await update.message.reply_text("Item id must be a number.")
+        await update.message.reply_text("❌ Item id must be a number.")
         return
+
+    item = _get_item_by_id(iid)
+    if not item:
+        await update.message.reply_text("❌ Item not found.")
+        return
+
     ok, msg = buy_item(update.effective_user.id, iid)
     await update.message.reply_text(msg)
 
