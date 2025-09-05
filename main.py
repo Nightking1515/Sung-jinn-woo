@@ -30,10 +30,11 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 # Telegram bot token (Render env me set karo)
-TOKEN = os.environ["BOT_TOKEN"]
+import os
+BOT_TOKEN = "8050711631:AAEOmQtI1LDg8F5zBST1tIPh0mDtHbIISEs"
 
 # Database connection
-DATABASE_URL = os.environ["DATABASE_URL"]
+DATABASE_URL = postgresql://sung_jinn_woo_user:VNrgXB6U3XMLllxX711mDg04YAVxZsko@dpg-d2rfgs75r7bs73c0an2g-a/sung_jinn_woo
 conn = psycopg2.connect(DATABASE_URL)
 cur = conn.cursor()
 
