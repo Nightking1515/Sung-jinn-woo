@@ -1140,10 +1140,9 @@ async def buy_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if data.startswith("buy_confirm_"):
         item_id = int(data.split("_")[2])
-      def buy_callback(update, context):
-    query = update.callback_query
-    tg_id = query.from_user.id
-    item_id = query.data.split("_")[1]  # buy_1 → item_id = 1
+        query = update.callback_query
+        tg_id = query.from_user.id
+        item_id = query.data.split("_")[1]  # buy_1 → item_id = 1
 
     result = buy_item(tg_id, item_id)
     query.answer()
