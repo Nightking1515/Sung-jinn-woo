@@ -421,15 +421,24 @@ async def buy_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # confirm purchase → use your existing buy_item(tg_id, item_id)
     if data.startswith("buy_confirm_"):
         item_id = int(data.split("_")[2])
-        try:
-            ok, msg = buy_item(update.effective_user.id, item_id)  # <-- your function
-        except NameError:
-            # Safety message if buy_item() not found
-            ok = False
-            msg = "⚠️ buy_item(tg_id, item_id) function not found in this project."
-        await query.edit_message_text(msg)
-        return
+    if item_id not in shop_items:
+        return "❌ Invalid item!"
 
+    item = shop_items[item_id]
+    price = item["price"]
+
+    # Get user balance (example with dict, replace with DB query)
+    user = users.get(tg_id, {"coins": 0, "inventory": []})
+
+    if user["coins"] < price:
+        return f"💸 Not enough coins! You need {price}, but you have {user['coins']}."
+
+    # Deduct coins and add item to inventory
+    user["coins"] -= price
+    user["inventory"].append(item["name"])
+    users[tg_id] = user  # save back to dict/db
+
+    return f"✅ You bought {item['name']} for {price} coins!"
     # cancel
     if data == "buy_cancel":
         await query.edit_message_text("❌ Purchase cancelled.")
