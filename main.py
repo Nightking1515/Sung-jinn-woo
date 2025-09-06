@@ -1148,6 +1148,25 @@ async def buy_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     result = buy_item(tg_id, item_id)
     query.answer()
     query.edit_message_text(result)
+# ---------------- /buy command with arguments ----------------
+@only_for_registered
+async def buy_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    tg_id = update.effective_user.id
+
+    # check if argument is given
+    if not context.args:
+        await update.message.reply_text("Usage: /buy <item_id>\nExample: /buy 15")
+        return
+
+    try:
+        item_id = int(context.args[0])   # /buy <item_id>
+    except ValueError:
+        await update.message.reply_text("❌ Item id must be a number.")
+        return
+
+    # call actual buying function
+    msg = buy_item(tg_id, item_id)
+    await update.message.reply_text(msg)
 
 # /inventory, /swards, /revivalitem
 @only_for_registered
