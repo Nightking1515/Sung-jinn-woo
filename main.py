@@ -423,11 +423,7 @@ def _get_item_by_id(iid: int):
 
 def buy_item(tg_id, item_id):
     """ Deduct coins and add item to user inventory """
-    # ensure user exists
-    if tg_id not in users:
-        users[tg_id] = {"coins": 500, "inventory": []}  # default new user
-
-    user = users[tg_id]
+    user = ensure_user(tg_id)   # ✅ always ensure user exists
     item = _get_item_by_id(item_id)
 
     if not item:
@@ -436,12 +432,11 @@ def buy_item(tg_id, item_id):
     if user["coins"] < item["price"]:
         return f"💸 Not enough coins! You need {item['price']} but you only have {user['coins']}."
 
-    # Deduct coins and add item
+    # ✅ Deduct coins and add item
     user["coins"] -= item["price"]
     user["inventory"].append(item["name"])
 
     return f"✅ You bought {item['name']}!\nRemaining balance: {user['coins']} coins."
-
 
 # ---------------- keyboard builders ----------------
 def _build_buy_keyboard(start=1, per_page=10):
