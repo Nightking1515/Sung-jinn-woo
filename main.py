@@ -346,7 +346,73 @@ async def shop_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     footer = "\n\n💡 Buy with: /buy\n(then pick item number)"
     await query.edit_message_text(f"{header}:\n\n{body}{footer}", disable_web_page_preview=True)
 
-# ---------------- /buy (pagination 1–50) ----------------
+# ---------------- Inventory + Buy System ----------------
+
+# Example user data structure (aap database use kar rahe ho to uske sath integrate karna hoga)
+users = {}  # {tg_id: {"coins": int, "inventory": []}}
+
+# Example shop items (id, name, price, extra stats)
+SHOP_ITEMS = {
+    "swords": [
+        {"id": 1, "name": "Iron Sword", "price": 200, "damage": 10},
+        {"id": 2, "name": "Steel Sword", "price": 500, "damage": 20},
+        {"id": 3, "name": "Silver Sword", "price": 800, "damage": 30},
+        {"id": 4, "name": "Magic Sword", "price": 1500, "damage": 50},
+        {"id": 5, "name": "Flame Sword", "price": 2200, "damage": 70},
+        {"id": 6, "name": "Ice Sword", "price": 2500, "damage": 80},
+        {"id": 7, "name": "Thunder Sword", "price": 3000, "damage": 100},
+        {"id": 8, "name": "Dark Sword", "price": 4000, "damage": 120},
+        {"id": 9, "name": "Light Sword", "price": 4200, "damage": 125},
+        {"id": 10, "name": "Dragon Slayer", "price": 5000, "damage": 150},
+        {"id": 11, "name": "Shadow Blade", "price": 6000, "damage": 180},
+        {"id": 12, "name": "Heavenly Sword", "price": 7500, "damage": 200},
+        {"id": 13, "name": "Chaos Sword", "price": 10000, "damage": 250},
+        {"id": 14, "name": "Demonic Sword", "price": 12000, "damage": 300},
+        {"id": 15, "name": "Excalibur", "price": 15000, "damage": 400},
+    ],
+    "revival": [
+        {"id": 16, "name": "Revival Potion", "price": 500, "effect": "Revive with 20% HP"},
+        {"id": 17, "name": "Strong Revival Potion", "price": 1200, "effect": "Revive with 50% HP"},
+        {"id": 18, "name": "Phoenix Feather", "price": 2500, "effect": "Revive with 100% HP"},
+        {"id": 19, "name": "Life Scroll", "price": 3000, "effect": "Revive + 20% XP"},
+        {"id": 20, "name": "Divine Elixir", "price": 4000, "effect": "Revive with full stats"},
+        {"id": 21, "name": "Resurrection Stone", "price": 5000, "effect": "Revive 2 times"},
+        {"id": 22, "name": "Angel Tear", "price": 6500, "effect": "Revive + Shield for 1 turn"},
+        {"id": 23, "name": "Holy Water", "price": 7000, "effect": "Revive + Full HP"},
+        {"id": 24, "name": "God’s Blessing", "price": 9000, "effect": "Auto Revive once"},
+        {"id": 25, "name": "Immortal Charm", "price": 12000, "effect": "Revive + Invincible 1 turn"},
+    ],
+    "poison": [
+        {"id": 26, "name": "Poison Dagger", "price": 700, "damage": 15},
+        {"id": 27, "name": "Venom Bottle", "price": 1200, "damage": 25},
+        {"id": 28, "name": "Toxin Bomb", "price": 2000, "damage": 40},
+        {"id": 29, "name": "Paralysis Poison", "price": 2500, "damage": 50},
+        {"id": 30, "name": "Deadly Venom", "price": 3500, "damage": 80},
+        {"id": 31, "name": "Corruption Gas", "price": 4000, "damage": 100},
+        {"id": 32, "name": "Silent Killer", "price": 5000, "damage": 120},
+        {"id": 33, "name": "Toxic Arrow", "price": 6000, "damage": 140},
+        {"id": 34, "name": "Necro Venom", "price": 7500, "damage": 180},
+        {"id": 35, "name": "Plague Bomb", "price": 9000, "damage": 220},
+    ],
+    "special": [
+        {"id": 36, "name": "Hunter Key", "price": 300, "effect": "Unlock dungeons"},
+        {"id": 37, "name": "Magic Shield", "price": 2000, "effect": "Reduce damage 20%"},
+        {"id": 38, "name": "Golden Armor", "price": 5000, "effect": "Reduce damage 50%"},
+        {"id": 39, "name": "XP Booster", "price": 1500, "effect": "Gain double XP"},
+        {"id": 40, "name": "Lucky Charm", "price": 1200, "effect": "Increase drop rate"},
+        {"id": 41, "name": "Soul Orb", "price": 2500, "effect": "Extra summon power"},
+        {"id": 42, "name": "Dark Crystal", "price": 4000, "effect": "Boost poison attack"},
+        {"id": 43, "name": "Sacred Ring", "price": 6000, "effect": "Immune to poison 2 turns"},
+        {"id": 44, "name": "Teleport Scroll", "price": 1000, "effect": "Escape from battle"},
+        {"id": 45, "name": "Binding Chains", "price": 2000, "effect": "Stun enemy 1 turn"},
+        {"id": 46, "name": "Power Elixir", "price": 3000, "effect": "Increase damage 30%"},
+        {"id": 47, "name": "Stamina Potion", "price": 1500, "effect": "Restore 100 stamina"},
+        {"id": 48, "name": "Hunter Medal", "price": 500, "effect": "Collectible"},
+        {"id": 49, "name": "Dimensional Stone", "price": 7000, "effect": "Summon ally"},
+        {"id": 50, "name": "Time Relic", "price": 10000, "effect": "Take extra turn"},
+    ]
+}
+# ---------------- helper functions ----------------
 def _get_item_by_id(iid: int):
     for cat_items in SHOP_ITEMS.values():
         for it in cat_items:
@@ -354,14 +420,37 @@ def _get_item_by_id(iid: int):
                 return it
     return None
 
+
+def buy_item(tg_id, item_id):
+    """ Deduct coins and add item to user inventory """
+    # ensure user exists
+    if tg_id not in users:
+        users[tg_id] = {"coins": 500, "inventory": []}  # default new user
+
+    user = users[tg_id]
+    item = _get_item_by_id(item_id)
+
+    if not item:
+        return "❌ Item not found!"
+
+    if user["coins"] < item["price"]:
+        return f"💸 Not enough coins! You need {item['price']} but you only have {user['coins']}."
+
+    # Deduct coins and add item
+    user["coins"] -= item["price"]
+    user["inventory"].append(item["name"])
+
+    return f"✅ You bought {item['name']}!\nRemaining balance: {user['coins']} coins."
+
+
+# ---------------- keyboard builders ----------------
 def _build_buy_keyboard(start=1, per_page=10):
-    # 1..50 numbers pages
     buttons = []
     end = min(start + per_page - 1, 50)
     row = []
     for i in range(start, end + 1):
         row.append(InlineKeyboardButton(str(i), callback_data=f"buy_select_{i}"))
-        if len(row) == 5:       # 5 buttons per row (2 rows = 10 numbers)
+        if len(row) == 5:  # 5 buttons per row
             buttons.append(row)
             row = []
     if row:
@@ -377,13 +466,49 @@ def _build_buy_keyboard(start=1, per_page=10):
 
     return InlineKeyboardMarkup(buttons)
 
+
+# ---------------- commands ----------------
 async def buy_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """ /buy <item_id> (argument-based) OR /buy for menu """
+    tg_id = update.effective_user.id
+
+    if not context.args:
+        await update.message.reply_text(
+            "🛒 Choose item number to buy:",
+            reply_markup=_build_buy_keyboard(1)
+        )
+        return
+
+    try:
+        item_id = int(context.args[0])
+    except ValueError:
+        await update.message.reply_text("❌ Item id must be a number.")
+        return
+
+    item = _get_item_by_id(item_id)
+    if not item:
+        await update.message.reply_text("❌ Item not found in shop.")
+        return
+
+    # confirmation buttons
+    kb = InlineKeyboardMarkup([
+        [InlineKeyboardButton("✅ Yes", callback_data=f"buy_confirm_{item_id}"),
+         InlineKeyboardButton("❌ No", callback_data="buy_cancel")]
+    ])
+
+    details = f"🛒 {item['name']} — ₩{item['price']}"
+    if "damage" in item:
+        details += f"\nDMG: {item['damage']}"
+    if "effect" in item:
+        details += f"\nEffect: {item['effect']}"
+
     await update.message.reply_text(
-        "🛒 Choose item number to buy:",
-        reply_markup=_build_buy_keyboard(1)
+        f"{details}\n\nDo you want to buy this item?",
+        reply_markup=kb
     )
 
-# ---------------- callbacks for /buy ----------------
+
+# ---------------- callbacks (buttons) ----------------
 async def buy_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -418,31 +543,19 @@ async def buy_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(f"{details}\n\nDo you want to buy this item?", reply_markup=kb)
         return
 
-    # confirm purchase → use your existing buy_item(tg_id, item_id)
+    # confirm purchase
     if data.startswith("buy_confirm_"):
         item_id = int(data.split("_")[2])
-    if item_id not in shop_items:
-        return "❌ Invalid item!"
+        tg_id = query.from_user.id
+        result = buy_item(tg_id, item_id)
+        await query.edit_message_text(result)
+        return
 
-    item = shop_items[item_id]
-    price = item["price"]
-
-    # Get user balance (example with dict, replace with DB query)
-    user = users.get(tg_id, {"coins": 0, "inventory": []})
-
-    if user["coins"] < price:
-        return f"💸 Not enough coins! You need {price}, but you have {user['coins']}."
-
-    # Deduct coins and add item to inventory
-    user["coins"] -= price
-    user["inventory"].append(item["name"])
-    users[tg_id] = user  # save back to dict/db
-
-    return f"✅ You bought {item['name']} for {price} coins!"
     # cancel
     if data == "buy_cancel":
         await query.edit_message_text("❌ Purchase cancelled.")
         return
+
 
 # ------------ PvP Logic & Matches ------------
 def compute_power(user):
@@ -1061,64 +1174,6 @@ async def shop_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     body = "\n".join(_format_item_line(it) for it in items)
     footer = "\n\n💡 Buy with: /buy <id or name>"
     await update.message.reply_text(f"{header}:\n\n{body}{footer}", disable_web_page_preview=True)
-
-
-# ---------------- /buy command ----------------
-@only_for_registered
-async def buy_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not context.args:
-        await update.message.reply_text("Usage: /buy <item_id>\nExample: /buy 15")
-        return
-
-    try:
-        item_id = int(context.args[0])
-    except ValueError:
-        await update.message.reply_text("❌ Item id must be a number.")
-        return
-
-    item = _get_item_by_id(item_id)
-    if not item:
-        await update.message.reply_text("❌ Item not found in shop.")
-        return
-
-    # Confirmation buttons
-    kb = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("✅ Yes", callback_data=f"buy_confirm_{item_id}"),
-            InlineKeyboardButton("❌ No", callback_data="buy_cancel")
-        ]
-    ])
-
-    details = f"🛒 {item['name']} — ₩{item['price']}"
-    if "damage" in item:
-        details += f"\nDMG: {item['damage']}"
-    if "effect" in item:
-        details += f"\nEffect: {item['effect']}"
-
-    await update.message.reply_text(
-        f"{details}\n\nDo you want to buy this item?",
-        reply_markup=kb
-    )
-
-
-# ---------------- callbacks (shared with buttons) ----------------
-async def buy_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    data = query.data
-
-    if data.startswith("buy_confirm_"):
-        item_id = int(data.split("_")[2])
-        tg_id = query.from_user.id
-
-        result = buy_item(tg_id, item_id)   # ✅ yeh tumhari function call karega
-        await query.edit_message_text(result)
-        return
-
-    if data == "buy_cancel":
-        await query.edit_message_text("❌ Purchase cancelled.")
-        return
-
 
 # /inventory, /swards, /revivalitem
 @only_for_registered
