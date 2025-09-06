@@ -1063,39 +1063,7 @@ async def shop_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"{header}:\n\n{body}{footer}", disable_web_page_preview=True)
 
 
-# ---------------- argument-based /buy ----------------
-@only_for_registered
-async def buy_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not context.args:
-        await update.message.reply_text("Usage: /buy <item_id or item_name>")
-        return
-
-    query = " ".join(context.args).strip().lower()
-
-    # Try as ID
-    item = None
-    if query.isdigit():
-        iid = int(query)
-        item = _get_item_by_id(iid)
-
-    # Try as name (if ID didn’t match)
-    if not item:
-        item = next((i for i in _flatten_all_items() if i["name"].lower() == query), None)
-
-    if not item:
-        await update.message.reply_text("❌ Item not found.")
-        return
-
-    ok, msg = buy_item(update.effective_user.id, item["id"])
-    await update.message.reply_text(msg)
-# ---------------- argument-based /buy ----------------
-def _get_item_by_id(iid: int):
-    for cat_items in SHOP_ITEMS.values():
-        for it in cat_items:
-            if it["id"] == iid:
-                return it
-    return None
-
+# ---------------- /buy command ----------------
 @only_for_registered
 async def buy_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
@@ -1113,7 +1081,7 @@ async def buy_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Item not found in shop.")
         return
 
-    # confirmation buttons
+    # Confirmation buttons
     kb = InlineKeyboardMarkup([
         [
             InlineKeyboardButton("✅ Yes", callback_data=f"buy_confirm_{item_id}"),
@@ -1132,7 +1100,8 @@ async def buy_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=kb
     )
 
-# ---------------- callbacks (shared with button system) ----------------
+
+# ---------------- callbacks (shared with buttons) ----------------
 async def buy_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -1140,32 +1109,16 @@ async def buy_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if data.startswith("buy_confirm_"):
         item_id = int(data.split("_")[2])
-        query = update.callback_query
         tg_id = query.from_user.id
-        item_id = query.data.split("_")[1]  # buy_1 → item_id = 1
 
-    result = buy_item(tg_id, item_id)
-    query.answer()
-    query.edit_message_text(result)
-# ---------------- /buy command with arguments ----------------
-@only_for_registered
-async def buy_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    tg_id = update.effective_user.id
-
-    # check if argument is given
-    if not context.args:
-        await update.message.reply_text("Usage: /buy <item_id>\nExample: /buy 15")
+        result = buy_item(tg_id, item_id)   # ✅ yeh tumhari function call karega
+        await query.edit_message_text(result)
         return
 
-    try:
-        item_id = int(context.args[0])   # /buy <item_id>
-    except ValueError:
-        await update.message.reply_text("❌ Item id must be a number.")
+    if data == "buy_cancel":
+        await query.edit_message_text("❌ Purchase cancelled.")
         return
 
-    # call actual buying function
-    msg = buy_item(tg_id, item_id)
-    await update.message.reply_text(msg)
 
 # /inventory, /swards, /revivalitem
 @only_for_registered
