@@ -1140,16 +1140,14 @@ async def buy_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if data.startswith("buy_confirm_"):
         item_id = int(data.split("_")[2])
-        try:
-            ok, msg = buy_item(update.effective_user.id, item_id)  # <-- your function
-        except NameError:
-            ok, msg = False, "⚠️ buy_item(tg_id, item_id) function not found."
-        await query.edit_message_text(msg)
-        return
+      def buy_callback(update, context):
+    query = update.callback_query
+    tg_id = query.from_user.id
+    item_id = query.data.split("_")[1]  # buy_1 → item_id = 1
 
-    if data == "buy_cancel":
-        await query.edit_message_text("❌ Purchase cancelled.")
-        return
+    result = buy_item(tg_id, item_id)
+    query.answer()
+    query.edit_message_text(result)
 
 # /inventory, /swards, /revivalitem
 @only_for_registered
