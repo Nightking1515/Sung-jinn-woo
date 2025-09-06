@@ -1186,6 +1186,19 @@ async def inventory_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text)
 
 @only_for_registered
+async def inventory_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    tg_id = update.effective_user.id
+    user = ensure_user(tg_id)
+
+    if not user["inventory"]:
+        await update.message.reply_text("🎒 Your inventory is empty.")
+        return
+
+    inv_text = "🎒 Your Inventory:\n" + "\n".join([f"- {item}" for item in user["inventory"]])
+    inv_text += f"\n\n💰 Balance: {user['coins']} coins"
+    await update.message.reply_text(inv_text)
+
+@only_for_registered
 async def swards_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u = get_user_by_tg(update.effective_user.id)
     conn = db_conn(); c = conn.cursor()
