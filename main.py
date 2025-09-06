@@ -8,6 +8,7 @@ Solo Leveling style Telegram bot - full implementation for commands list.
 """
 
 import os
+import json
 import sqlite3
 import random
 import math
